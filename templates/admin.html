@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Dashboard de Entregas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
+  :root { --bg:#0d1117; --surface:#161b22; --surface2:#1c2333; --border:#30363d; --text:#e6edf3; --muted:#7d8590; --ontime:#58a6ff; --ontime-bg:#0d1f3c; --speed:#3fb950; --late:#f85149; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:48px 52px; max-width:480px; width:100%; text-align:center; }
+  .icon { width:64px; height:64px; background:var(--surface2); border:1px solid var(--border); border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; font-size:28px; }
+  h2 { font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; margin-bottom:6px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:28px; line-height:1.6; }
+  .drop-zone { border:2px dashed var(--border); border-radius:12px; padding:32px 24px; cursor:pointer; transition:all 0.2s; margin-bottom:16px; position:relative; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color:var(--ontime); background:var(--ontime-bg); }
+  .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .drop-text { color:var(--muted); font-size:13px; pointer-events:none; }
+  .drop-text strong { color:var(--ontime); }
+  .btn { width:100%; padding:12px; background:var(--ontime); color:#0d1117; border:none; border-radius:8px; font-size:14px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; transition:opacity 0.15s; }
+  .btn:hover { opacity:0.88; }
+  .btn:disabled { opacity:0.4; cursor:default; }
+  #msg { margin-top:14px; font-size:13px; min-height:20px; }
+  .success { color:var(--speed); }
+  .error   { color:var(--late); }
+  .view-link { display:inline-block; margin-top:16px; color:var(--ontime); font-size:13px; font-weight:500; text-decoration:none; }
+  .view-link:hover { text-decoration:underline; }
+  .last-upload { margin-top:20px; padding:12px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; font-size:12px; color:var(--muted); text-align:left; }
+  .last-upload strong { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">⬆️</div>
+  <h2>Subir Reporte</h2>
+  <p class="sub">Sube el reporte Excel diario. Todos los usuarios verán los datos actualizados automáticamente.</p>
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+    <div class="drop-text" id="dropText">
+      <div style="font-size:24px;margin-bottom:8px">📂</div>
+      <div>Arrastra tu archivo aquí o <strong>haz clic para seleccionar</strong></div>
+      <div style="margin-top:6px;font-size:11px">XLSX · XLS</div>
+    </div>
+  </div>
+
+  <button class="btn" id="uploadBtn" disabled>Subir reporte</button>
+  <div id="msg"></div>
+  <a href="/" class="view-link">← Ver dashboard</a>
+
+  <div class="last-upload" id="lastUpload" style="display:none">
+    <strong>Último reporte:</strong><br>
+    <span id="lastInfo"></span>
+  </div>
+</div>
+
+<script>
+const drop = document.getElementById('dropZone');
+const input = document.getElementById('fileInput');
+const btn = document.getElementById('uploadBtn');
+const msg = document.getElementById('msg');
+let file = null;
+
+// Load last upload info
+fetch('/data').then(r=>r.json()).then(d => {
+  if (d.uploaded_at) {
+    document.getElementById('lastUpload').style.display = 'block';
+    document.getElementById('lastInfo').textContent = d.filename + ' — ' + d.uploaded_at + ' (' + (d.total||'').toLocaleString('es-MX') + ' paquetes)';
+  }
+});
+
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag-over'); setFile(e.dataTransfer.files[0]); });
+input.addEventListener('change', () => { if (input.files[0]) setFile(input.files[0]); });
+
+function setFile(f) {
+  file = f;
+  document.getElementById('dropText').innerHTML = '<div style="font-size:20px;margin-bottom:6px">✅</div><div><strong>'+f.name+'</strong></div><div style="margin-top:4px;font-size:11px">'+(f.size/1024).toFixed(0)+' KB</div>';
+  btn.disabled = false;
+  msg.textContent = '';
+}
+
+btn.addEventListener('click', async () => {
+  if (!file) return;
+  btn.disabled = true;
+  btn.textContent = 'Subiendo…';
+  msg.className = '';
+  msg.textContent = '';
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res  = await fetch('/upload', { method:'POST', body:form });
+    const data = await res.json();
+    if (data.ok) {
+      msg.className = 'success';
+      msg.textContent = '✅ Reporte cargado: ' + data.total.toLocaleString('es-MX') + ' paquetes. Todos los usuarios ya ven los datos actualizados.';
+      btn.textContent = 'Subir otro reporte';
+      btn.disabled = false;
+    } else {
+      throw new Error(data.error || 'Error desconocido');
+    }
+  } catch(e) {
+    msg.className = 'error';
+    msg.textContent = '❌ ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Subir reporte';
+  }
+});
+</script>
+</body>
+</html>
