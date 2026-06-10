@@ -474,9 +474,7 @@ function todayISO() {
 function setToday() { document.getElementById('todayDate').value = todayISO(); }
 
 function getToday() {
-  const v = document.getElementById('todayDate').value;
-  // Return as local midnight
-  return v ? new Date(v + 'T00:00:00') : new Date(todayISO() + 'T00:00:00');
+  return new Date(todayISO() + 'T00:00:00');
 }
 
 // Normalize to local midnight for date-only comparison
