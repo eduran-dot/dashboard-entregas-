@@ -120,8 +120,8 @@ def upload():
         with open(DATA_FILE, 'w') as f:
             json.dump({'rows': rows, 'hasRoutes': has_routes}, f)
 
-       mx_tz = timezone(timedelta(hours=-6))
-now = datetime.now(mx_tz).strftime('%Y-%m-%d %H:%M:%S')
+        mx_tz = timezone(timedelta(hours=-6))
+        now = datetime.now(mx_tz).strftime('%Y-%m-%d %H:%M:%S')
         with open(UPLOAD_DATE_FILE, 'w') as f:
             json.dump({'uploaded_at': now, 'filename': filename, 'total': len(rows)}, f)
 
