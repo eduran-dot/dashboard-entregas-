@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import pandas as pd
 import json
 import os
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -120,7 +120,8 @@ def upload():
         with open(DATA_FILE, 'w') as f:
             json.dump({'rows': rows, 'hasRoutes': has_routes}, f)
 
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+       mx_tz = timezone(timedelta(hours=-6))
+now = datetime.now(mx_tz).strftime('%Y-%m-%d %H:%M:%S')
         with open(UPLOAD_DATE_FILE, 'w') as f:
             json.dump({'uploaded_at': now, 'filename': filename, 'total': len(rows)}, f)
 
